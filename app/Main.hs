@@ -3,4 +3,4 @@ module Main where
 import Lang.Cortho
 
 main :: IO ()
-main = putStrLn "main: TODO"
+main = putStrLn "Main is not implemented yet"
