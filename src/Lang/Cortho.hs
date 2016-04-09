@@ -1,4 +1,8 @@
-module Lang.Cortho where
+module Lang.Cortho
+  ( -- * re-exports
+    module X
+  )
+where
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+import Lang.Cortho.Prelude as X
+import Lang.Cortho.Types   as X
