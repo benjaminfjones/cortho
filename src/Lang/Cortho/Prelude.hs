@@ -9,7 +9,7 @@ import Lang.Cortho.Types
 
 
 corePrelude :: Program
-corePrelude =
+corePrelude = Program $ map (\(x, y, z) -> ScDef x y z)
   [ ("I",  ["x"],                EVar "x")
   , ("K",  ["x", "y"],           EVar "x")
   , ("K1", ["x", "y"],           EVar "y")

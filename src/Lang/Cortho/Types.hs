@@ -12,12 +12,13 @@ module Lang.Cortho.Types
     CoreExpr
   , Expr(..)
   , Alter(..)
-  , Program
+  , Program(..)
   , ScDef(..)
     -- * Auxilliary types
   , Ident
   )
 where
+
 
 import qualified Data.Text as T
 import           Data.Text (Text)
@@ -25,18 +26,18 @@ import           GHC.Exts (IsString(..))
 import           Text.PrettyPrint.HughesPJClass
 
 
+------------------------------------------------------------------------
+-- Core Types
+------------------------------------------------------------------------
+
 -- | Identifier used for names
 newtype Ident = Ident { unIdent :: Text }
 
 instance IsString Ident where
   fromString = Ident . T.pack
 
-------------------------------------------------------------------------
--- Core Types
-------------------------------------------------------------------------
-
 -- | Core program type, a list of supercombinator definitions
-type Program = [ScDef]
+data Program = Program [ScDef]
 
 -- | Supercombinator definition
 data ScDef = ScDef
@@ -66,6 +67,15 @@ data Expr a
       ![a]         --     binders
       !(Expr a)        --     body
 
+isAtom :: Expr a -> Bool
+isAtom (EVar _)      = True
+isAtom (ENum _)      = True
+isAtom (EConstr _ _) = True
+isAtom (EAp _ _)     = False
+isAtom (ELet _ _ _)  = False
+isAtom (ECase _ _)   = False
+isAtom (ELam _ _)    = False
+
 -- | CoreExpr is the usual expression type where binders are just names
 type CoreExpr = Expr Ident
 
@@ -90,11 +100,19 @@ ispace = 2
 instance Pretty Ident where
   pPrint = text . T.unpack . unIdent
 
+instance Pretty ScDef where
+  pPrint (ScDef name vars expr) =
+    pPrint name <+> hsep (pPrint <$> vars) <+> equals <+> pPrint expr
+
+instance Pretty Program where
+  pPrint (Program sds) = vcat (pPrint <$> sds)
+
 instance Pretty a => Pretty (Expr a) where
   pPrint (EVar x) = pPrint x
   pPrint (ENum x) = pPrint x
   pPrint (EConstr t a) = text "Pack{" <> int t <> text "," <> int a <> text "}"
-  pPrint (EAp f a) = pPrint f <+> pPrint a
+  pPrint (EAp f a) | isAtom a  = pPrint f <+> pPrint a
+                   | otherwise = pPrint f <+> parens (pPrint a)
   pPrint (ELet b binds body) =
     text (if b then "letrec" else "let") <+> pBinds binds <+> text "in" <+>
          pPrint body
