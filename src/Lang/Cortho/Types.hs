@@ -10,12 +10,15 @@
 module Lang.Cortho.Types
   ( -- * core expression type
     CoreExpr
+  , CoreAlter
   , Expr(..)
   , Alter(..)
   , Program(..)
   , ScDef(..)
     -- * Auxilliary types
   , Ident
+  , identFromText
+  , identFromStr
   )
 where
 
@@ -32,6 +35,9 @@ import           Text.PrettyPrint.HughesPJClass
 
 -- | Identifier used for names
 newtype Ident = Ident { unIdent :: Text }
+
+identFromText = Ident
+identFromStr  = Ident . T.pack
 
 instance IsString Ident where
   fromString = Ident . T.pack
@@ -78,6 +84,7 @@ isAtom (ELam _ _)    = False
 
 -- | CoreExpr is the usual expression type where binders are just names
 type CoreExpr = Expr Ident
+type CoreAlter = Alter Ident
 
 -- | Case alternative, a pattern/expression pair
 data Alter a
@@ -99,6 +106,9 @@ ispace = 2
 
 instance Pretty Ident where
   pPrint = text . T.unpack . unIdent
+
+instance Show Ident where
+  show = show . pPrint
 
 instance Pretty ScDef where
   pPrint (ScDef name vars expr) =
