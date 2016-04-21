@@ -20,6 +20,7 @@ library
                      , Lang.Cortho.Prelude
                      , Lang.Cortho.Types
   build-depends:       base   >= 4.7    && < 5
+                     , parsec >= 3.1    && < 3.2
                      , pretty >= 1.1.2  && < 2
                      , text   >= 1.2    && < 1.3
   default-language:    Haskell2010
@@ -38,6 +39,10 @@ test-suite cortho-test
   main-is:             Spec.hs
   build-depends:       base
                      , cortho
+                     , parsec >= 3.1    && < 3.2
+                     , tasty            >= 0.11           && < 1
+                     , tasty-quickcheck >= 0.8            && < 1
+                     , tasty-hunit      >= 0.9            && < 1
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

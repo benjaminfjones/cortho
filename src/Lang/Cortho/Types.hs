@@ -17,14 +17,15 @@ module Lang.Cortho.Types
   , ScDef(..)
     -- * Auxilliary types
   , Ident
+  , unIdent
   , identFromText
   , identFromStr
   )
 where
 
 
-import qualified Data.Text as T
 import           Data.Text (Text)
+import qualified Data.Text as T
 import           GHC.Exts (IsString(..))
 import           Text.PrettyPrint.HughesPJClass
 
@@ -35,6 +36,7 @@ import           Text.PrettyPrint.HughesPJClass
 
 -- | Identifier used for names
 newtype Ident = Ident { unIdent :: Text }
+  deriving (Eq, Show)
 
 identFromText = Ident
 identFromStr  = Ident . T.pack
@@ -44,6 +46,7 @@ instance IsString Ident where
 
 -- | Core program type, a list of supercombinator definitions
 data Program = Program [ScDef]
+  deriving (Eq, Show)
 
 -- | Supercombinator definition
 data ScDef = ScDef
@@ -51,11 +54,12 @@ data ScDef = ScDef
   , scBinds :: [Ident]   -- ^ binders (arguments)
   , scExpr  :: CoreExpr  -- ^ right-hand side
   }
+  deriving (Eq, Show)
 
 -- | The core expression data type, parametrized over a binders type
 data Expr a
   = EVar !Ident        -- ^ variable identifier
-  | ENum !Int          -- ^ number
+  | ENum !Integer      -- ^ number
   | EConstr            -- ^ data constructor
       !Int             --     data constructor tag
       !Int             --     airity
@@ -64,7 +68,7 @@ data Expr a
       !(Expr a)        --     argument
   | ELet               -- ^ let/letrec expression
       !Bool            --     True <-> is "letrec", False <-> is "let"
-      !(a, Expr a)     --     a binding
+      ![(a, Expr a)]   --     a list of bindings
       !(Expr a)        --     body
   | ECase              -- ^ case expression
       !(Expr a)        --     expression to case on
@@ -72,6 +76,7 @@ data Expr a
   | ELam               -- ^ lambda
       ![a]         --     binders
       !(Expr a)        --     body
+  deriving (Eq, Show)
 
 isAtom :: Expr a -> Bool
 isAtom (EVar _)      = True
@@ -94,6 +99,7 @@ data Alter a
       !(Expr a)        --     right hand side
   | ADefault           -- ^ default "fall-through" case
       !(Expr a)        --     right hand side
+  deriving (Eq, Show)
 
 
 ------------------------------------------------------------------------
@@ -106,9 +112,6 @@ ispace = 2
 
 instance Pretty Ident where
   pPrint = text . T.unpack . unIdent
-
-instance Show Ident where
-  show = show . pPrint
 
 instance Pretty ScDef where
   pPrint (ScDef name vars expr) =
@@ -123,8 +126,8 @@ instance Pretty a => Pretty (Expr a) where
   pPrint (EConstr t a) = text "Pack{" <> int t <> text "," <> int a <> text "}"
   pPrint (EAp f a) | isAtom a  = pPrint f <+> pPrint a
                    | otherwise = pPrint f <+> parens (pPrint a)
-  pPrint (ELet b binds body) =
-    text (if b then "letrec" else "let") <+> pBinds binds <+> text "in" <+>
+  pPrint (ELet b decls body) =
+    text (if b then "letrec" else "let") <+> hsep (map pBind decls) <+> text "in" <+>
          pPrint body
   pPrint (ECase c as) =
     text "case" <+> pPrint c <+> text "of" $$
@@ -138,7 +141,7 @@ instance Pretty a => Pretty (Alter a) where
   pPrint (ADefault e) =
     text "_" <+> text "->" <+> pPrint e
 
-pBinds :: Pretty a => (a, Expr a) -> Doc
-pBinds (name, expr) = pPrint name <+> equals <+> pPrint expr
+pBind :: Pretty a => (a, Expr a) -> Doc
+pBind (name, expr) = pPrint name <> equals <> pPrint expr <> text ";"
 
 
