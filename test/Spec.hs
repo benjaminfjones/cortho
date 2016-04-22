@@ -17,12 +17,13 @@ pIdent   = parse parseIdent ""
 pExpr    = parse parseExpr ""
 pNum     = parse parseNum ""
 pAlter   = parse parseAlt ""
-pAlts    = parse (termList1 parseAlt) ""
+pAlts    = parse parseAlts ""
 pProgram = parse parseProgram ""
 
 isLeft :: Either a b -> Bool
 isLeft (Left _)  = True
 isLeft (Right _) = False
+isRight = not . isLeft
 
 -- | Basic parser tests
 parserTests = testGroup "Parser Units"
@@ -33,11 +34,11 @@ parserTests = testGroup "Parser Units"
   , testCase "parse num" $
       pNum "1024" @?= Right 1024
   , testCase "parse pattern" $
-      pAlter "<0> x -> 1;" @?= Right (APattern 0 ["x"] (ENum 1))
+      pAlter "<0> x -> 1" @?= Right (APattern 0 ["x"] (ENum 1))
   , testCase "parse default" $
-      pAlter "_ -> 1;" @?= Right (ADefault (ENum 1))
+      pAlter "_ -> 1" @?= Right (ADefault (ENum 1))
   , testCase "parse alts" $
-      pAlts  "<0> x -> 1; <1> x -> 2;" @?=
+      pAlts  "<0> x -> 1; <1> x -> 2" @?=
       Right [APattern 0 ["x"] (ENum 1), APattern 1 ["x"] (ENum 2)]
   ]
 
@@ -60,6 +61,8 @@ exprParserTests = testGroup "Expr Parser Units" $
         Right (EAp (EVar "f") (EAp (EVar "g") (EVar "x"))))
     , ("ap3", "f ((h g) x)",
         Right (EAp (EVar "f") (EAp (EAp (EVar "h") (EVar "g")) (EVar "x"))))
+    , ("multi ap", "f x y z",
+        Right (EAp (EAp (EAp (EVar "f") (EVar "x")) (EVar "y")) (EVar "z")))
     , ("non-ap", "foo of", Right (EVar "foo"))
     -- lets
     , ("let",  "let x=5 in x",
@@ -71,10 +74,10 @@ exprParserTests = testGroup "Expr Parser Units" $
     , ("letrec2", "letrec x=y in x",
         Right (ELet True [("x", EVar "y")] (EVar "x")))
     -- cases
-    , ("casepat", "case foo x of <0> x -> 1; <1> x -> 2;",
+    , ("casepat", "case foo x of <0> x -> 1; <1> x -> 2",
         Right (ECase (EAp (EVar "foo") (EVar "x")) [ APattern 0 ["x"] (ENum 1)
                                                    , APattern 1 ["x"] (ENum 2)]))
-    , ("caseboth", "case x of\n  <1> -> 5; _ -> 6;\n",
+    , ("caseboth", "case x of\n  <1> -> 5; _ -> 6\n",
         Right (ECase (EVar "x") [ APattern 1 [] (ENum 5)
                                 , ADefault (ENum 6) ]))
     -- lambdas
@@ -82,19 +85,35 @@ exprParserTests = testGroup "Expr Parser Units" $
         Right (ELam ["x"] (EVar "x")))
     , ("lambda 2", "\\f x -> f x",
         Right (ELam ["f", "x"] (EAp (EVar "f") (EVar "x"))))
-    , ("lambda case", "\\x -> case x of\n  <0> y -> 1; <1> z -> 2;",
+    , ("lambda case", "\\x -> case x of\n  <0> y -> 1; <1> z -> 2",
         Right (ELam ["x"] (ECase (EVar "x") [ APattern 0 ["y"] (ENum 1)
                                             , APattern 1 ["z"] (ENum 2)])))
     ]
 
 programParserTests = testGroup "Program Parser Units" $
-  map (\(name, s, res) -> testCase name (pProgram s @?= res))
-    [ ("top level def", "main = 0;",
-        Right (Program [ScDef "main" [] (ENum 0)]))
-    , ("main + function", "main = double x;\ndouble x = x x;",
-        Right (Program [ ScDef "main"   []    (EAp (EVar "double") (EVar "x"))
-                       , ScDef "double" ["x"] (EAp (EVar "x") (EVar "x"))]))
+  map (\(name, s, eval) -> testCase name (eval (pProgram s)))
+    [ ("top level def", "main = 0",
+        (@?= Right (Program [ScDef "main" [] (ENum 0)])))
+    , ("main + function", "main = double x;\ndouble x = x x",
+        (@?= Right (Program [ ScDef "main"   []    (EAp (EVar "double") (EVar "x"))
+                            , ScDef "double" ["x"] (EAp (EVar "x") (EVar "x"))])))
+    , ("ex1.21", "f = 3; \n\
+                 \g x y = let z = x in z ;\n\
+                 \h x = case (let y = x in y) of\n\
+                 \        <1> -> 2;\n\
+                 \        <2> -> 5",
+        assert . isRight)
+    , ("dangling else", "f x y = case x of\n\
+                        \          <1> -> case y of\n\
+                        \                   <1> -> 1;\n\
+                        \          <2> -> 2",
+      (@?= Right (let ap1 = APattern 1 [] (ENum 1) in
+                  let ap2 = APattern 2 [] (ENum 2) in
+                  let icase = ECase (EVar "y") [ap1, ap2] in
+                  let ocase = ECase (EVar "x") [APattern 1 [] icase] in
+                    Program [ScDef "f" ["x", "y"] ocase])))
     ]
+
 
 -- Properties ----------------------------------------------------------
 

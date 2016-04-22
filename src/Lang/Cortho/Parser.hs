@@ -16,19 +16,20 @@ module Lang.Cortho.Parser
   , parseSC
   , parseExpr
   , parseAlt
+  , parseAlts
   , parseIdent
   , parseNum
     -- * utilities
   , parseList
-  , termList
-  , termList1
+    -- * re-exported from Text.Parsec
+  , parse
   )
 where
 
 
 import Control.Monad
 import Data.Char (isAlphaNum)
-import Data.Foldable (foldl')
+import Data.Foldable (foldl1)
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -53,6 +54,7 @@ keywords = map T.pack
   , "in"
   , "case"
   , "of"
+  , "Pack"
   ]
 
 isKeyword :: Ident -> Bool
@@ -66,14 +68,20 @@ isKeyword s = unIdent s `elem` keywords
 {- Core Language Example:
 
 > main = double 2;
-> double x = 2 * x;
+> double x = 2 * x
+
+> f = 3;
+> g x y = let z = x in z;
+> h x = case (let y = x in y) of
+>         <1> -> 2;
+>         <2> -> 5
 
 -}
 
 
 -- | Parse a core language program
 parseProgram :: Parser Program
-parseProgram = Program <$> termList parseSC
+parseProgram = Program <$> (parseSC `sepBy` term)
 
 -- | Parse a core language supercombinator definition
 parseSC :: Parser ScDef
@@ -82,7 +90,6 @@ parseSC = do
   binds <- parseIdent `sepBy` ws
   equals
   rhs <- parseExpr
-  -- termination handled by termList
   return $ ScDef
              { scName  = name
              , scBinds = binds
@@ -95,17 +102,23 @@ parseSC = do
 -- parse overlaps with 'parseExprLhs'. If that parse fails, then parse a
 -- non-application exprssion.
 parseExpr :: Parser CoreExpr
-parseExpr = try parseEAp <|> parseExprLhs
+parseExpr =  try parseEAp  -- ]_
+         <|> parseAtomic   -- ]
+         <|> parseELet
+         <|> parseECase
+         <|> parseELam
   where
     -- Parse all expression forms except for application
-    parseExprLhs =
-      parseEConstr   <|>
-      parseELet      <|>
-      parseECase     <|>
-      parseELam      <|>
-      parseParenExpr <|>
-      parseENum      <|>
-      parseEVar
+    parseAtomic =  try parseEVar  -- ]_
+               <|> parseEConstr   -- ]
+               <|> parseParenExpr
+               <|> parseENum
+
+    -- Application: n-ary left-associative function application
+    parseEAp = do
+      exprs <- parseAtomic `sepBy1` ws
+      if length exprs > 1 then return $ foldl1 EAp exprs
+                          else mzero
 
     -- Parse identifier expressions (but not keywords)
     parseEVar = do
@@ -125,19 +138,12 @@ parseExpr = try parseEAp <|> parseExprLhs
       symbol '}'
       return $ EConstr n k
 
-    -- Application
-    parseEAp = do
-      e1 <- parseExprLhs
-      e2 <- parseExpr
-      return $ EAp e1 e2
-
     -- Let/Letrec expression
     parseELet = do
-      --keyw <- try (lexeme (string "letrec")) <|> lexeme (string "let")
       void $ string "let"
       mrec <- optionMaybe $ try (string "rec")
       ws1
-      decls <- parseList term parseDecl
+      decls <- parseDecl `sepBy1` term
       kw "in"
       e2 <- parseExpr
       return $ ELet (isJust mrec) decls e2
@@ -153,7 +159,7 @@ parseExpr = try parseEAp <|> parseExprLhs
       kw "case"
       e1 <- parseExpr
       kw "of"
-      alts <- termList1 parseAlt
+      alts <- parseAlts
       return $ ECase e1 alts
 
     -- Lambda
@@ -181,8 +187,11 @@ parseAlt = (try parseAPattern <?> "error at: parsePattern") <|> parseADefault
       symbol '_'
       arrow
       expr <- parseExpr
-      -- term separation is handled by termList(1)
       return $ ADefault expr
+
+-- | Parse one of more case alternatives separated by terminators
+parseAlts :: Parser [CoreAlter]
+parseAlts = parseAlt `sepBy1` term
 
 -- | Non-alpha numeric characters allowed after the first character in an identifier
 extraIdentChars :: [Char]
@@ -220,14 +229,6 @@ kw = void . lexeme . string
 -- parser)
 parseList :: Parser b -> Parser a -> Parser [a]
 parseList = flip sepBy
-
--- | Parse a sequence of terminated 'p's
-termList :: Parser a -> Parser [a]
-termList p = endBy p term
-
--- | Parse a non-empty sequence of terminated 'p's
-termList1 :: Parser a -> Parser [a]
-termList1 p = endBy1 p term
 
 -- | Terminator characters
 termChar :: Char
