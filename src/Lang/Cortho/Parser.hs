@@ -97,47 +97,12 @@ parseSC = do
              }
 
 -- | Parse a core language expression
---
--- Try to parse a function application first (since the first part of that
--- parse overlaps with 'parseExprLhs'. If that parse fails, then parse a
--- non-application exprssion.
 parseExpr :: Parser CoreExpr
-parseExpr =  try parseEAp  -- ]_
-         <|> parseAtomic   -- ]
-         <|> parseELet
+parseExpr =  parseELet
          <|> parseECase
          <|> parseELam
+         <|> parseE1
   where
-    -- Parse all expression forms except for application
-    parseAtomic =  try parseEVar  -- ]_
-               <|> parseEConstr   -- ]
-               <|> parseParenExpr
-               <|> parseENum
-
-    -- Application: n-ary left-associative function application
-    parseEAp = do
-      exprs <- parseAtomic `sepBy1` ws
-      if length exprs > 1 then return $ foldl1 EAp exprs
-                          else mzero
-
-    -- Parse identifier expressions (but not keywords)
-    parseEVar = do
-      s <- parseIdent
-      if isKeyword s
-         then mzero  -- fail
-         else return $ EVar s
-    parseENum = ENum <$> parseNum
-
-    -- Data constructor: note no whitespace in pack for now
-    parseEConstr = do
-      kw "Pack"
-      symbol '{'
-      n <- parseNum
-      symbol ','
-      k <- parseNum
-      symbol '}'
-      return $ EConstr n k
-
     -- Let/Letrec expression
     parseELet = do
       void $ string "let"
@@ -148,6 +113,7 @@ parseExpr =  try parseEAp  -- ]_
       e2 <- parseExpr
       return $ ELet (isJust mrec) decls e2
 
+    -- Let variable binding
     parseDecl = do
       EVar bind <- parseEVar
       symbol '='
@@ -169,6 +135,118 @@ parseExpr =  try parseEAp  -- ]_
       arrow
       e <- parseExpr
       return $ ELam vars e
+
+    -- The following productions encode operator precedence ----------------
+
+    -- Case: expr1 -> expr2 | expr1. (|) is right associative.
+    parseE1 = do
+      e2  <- parseE2
+      e1' <- parseE1'
+      return $ e1' e2
+
+    -- | Return a CoreExpr builder in the 'expr1' case
+    parseE1' :: Parser (CoreExpr -> CoreExpr)
+    parseE1' = parseOrRHS <|> (ws >> return id)
+      where
+        parseOrRHS = do
+          symbol '|'
+          e1 <- parseE1
+          return (\e2 -> EBinOp OpOr e2 e1)
+
+    -- Case: expr2 -> expr3 & expr2. (&) is right associative.
+    parseE2 = do
+      e3  <- parseE3
+      e2' <- parseE2'
+      return $ e2' e3
+
+    parseE2' = parseAndRHS <|> (ws >> return id)
+      where
+        parseAndRHS = do
+          symbol '&'
+          e2 <- parseE2
+          return (\e3 -> EBinOp OpAnd e3 e2)
+
+    -- Case: expr3 -> expr4 relop expr4. Relational operators are non-associative.
+    parseE3 = do
+      e4  <- parseE4
+      e3' <- parseE3'
+      return $ e3' e4
+
+    parseE3' = parseRelOpRHS <|> (ws >> return id)
+      where
+        parseRelOpRHS = do
+          op <- relop
+          e4' <- parseE4
+          return (\e4 -> EBinOp op e4 e4')
+
+    -- Case: expr4 -> expr5 +- expr4
+    parseE4 = do
+      e5 <- parseE5
+      f  <- parseE4'
+      return $ f e5
+
+    parseE4' = parseAddOpRHS <|> parseSubOpRHS <|> (ws >> return id)
+      where
+        parseAddOpRHS = do  -- + is right associative
+          symbol '+'
+          e4' <- parseE4
+          return (\e5 -> EBinOp OpAdd e5 e4')
+        parseSubOpRHS = do  -- - is non-associative
+          symbol '-'
+          e5' <- parseE5
+          return (\e5 -> EBinOp OpSub e5 e5')
+
+    -- Case: expr5 -> expr6 */ expr5(6)
+    parseE5 = do
+      e6 <- parseE6
+      f  <- parseE5'
+      return $ f e6
+
+    parseE5' = parseMultOpRHS <|> parseDivOpRHS <|> (ws >> return id)
+      where
+        parseMultOpRHS = do  -- * is right associative
+          symbol '*'
+          e5' <- parseE5
+          return (\e6 -> EBinOp OpMult e6 e5')
+        parseDivOpRHS = do  -- / is non-associative
+          symbol '/'
+          e6' <- parseE6
+          return (\e6 -> EBinOp OpDiv e6 e6')
+
+    -- Highest precedence sort of expr are the atomic ones and function
+    -- applications (left associative).
+    parseE6 = do
+      exprs <- parseAtomic `sepBy1` ws
+      case exprs of
+        []  -> error "fatal parser error: sepBy1 returned nothing"
+        [e] -> return $ e                 -- atomic expr
+        _   -> return $ foldl1 EAp exprs  -- application
+
+    -- Atomic expressions
+    parseAtomic =  parseEVar
+               <|> parseENum
+               <|> parseEConstr
+               <|> parseParenExpr
+
+    -- Identifier expressions (but not keywords)
+    parseEVar = try $ do
+      s <- parseIdent
+      if isKeyword s
+         then mzero  -- fail
+         else return $ EVar s
+
+    -- Integers
+    parseENum = ENum <$> parseNum
+
+    -- Data constructor: note no whitespace in pack for now
+    parseEConstr = do
+      kw "Pack"
+      symbol '{'
+      n <- parseNum
+      symbol ','
+      k <- parseNum
+      symbol '}'
+      return $ EConstr n k
 
     -- Expr in parens
     parseParenExpr = between (symbol '(') (symbol ')') parseExpr <* ws
@@ -258,7 +336,22 @@ ws1 = void $ many1 wsChar
 
 -- Various symbol lexemes ----------------------------------------------
 
-symbol c = lexeme (char c)
-arrow    = lexeme (string "->")
-lambda   = lexeme (char '\\')
-equals   = lexeme (char '=')
+symbol = lexeme . char
+bigSym = lexeme . string
+arrow  = lexeme (string "->")
+lambda = lexeme (char '\\')
+equals = lexeme (char '=')
+
+arithOp :: Parser BinOp
+arithOp =  (symbol '+' >> return OpAdd)
+       <|> (symbol '-' >> return OpSub)
+       <|> (symbol '*' >> return OpMult)
+       <|> (symbol '/' >> return OpDiv)
+
+relop :: Parser BinOp
+relop =  (bigSym "<=" >> return OpLE)
+     <|> (bigSym "<"  >> return OpLT)
+     <|> (bigSym ">=" >> return OpGE)
+     <|> (bigSym ">"  >> return OpGT)
+     <|> (bigSym "==" >> return OpEQ)
+     <|> (bigSym "!=" >> return OpNEQ)

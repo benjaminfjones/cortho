@@ -16,6 +16,8 @@ module Lang.Cortho.Types
   , Program(..)
   , ScDef(..)
     -- * Auxilliary types
+  , BinOp(..)
+  , UnaryOp(..)
   , Ident
   , unIdent
   , identFromText
@@ -59,15 +61,22 @@ data ScDef = ScDef
 -- | The core expression data type, parametrized over a binders type
 data Expr a
   = EVar !Ident        -- ^ variable identifier
-  | ENum !Integer      -- ^ number
+  | ENum  Integer      -- ^ number
+  | EBinOp             -- ^ infix binary operator
+       BinOp           --     operator
+      !(Expr a)        --     left argument
+      !(Expr a)        --     right argument
+  | EUnaOp             -- ^ prefix unary operator
+       UnaryOp         --     unary operator
+      !(Expr a)        --     unary argument
   | EConstr            -- ^ data constructor
-      !Int             --     data constructor tag
-      !Int             --     airity
+       Int             --     data constructor tag
+       Int             --     airity
   | EAp                -- ^ function application
       !(Expr a)        --     function
       !(Expr a)        --     argument
   | ELet               -- ^ let/letrec expression
-      !Bool            --     True <-> is "letrec", False <-> is "let"
+       Bool            --     True <-> is "letrec", False <-> is "let"
       ![(a, Expr a)]   --     a list of bindings
       !(Expr a)        --     body
   | ECase              -- ^ case expression
@@ -101,6 +110,30 @@ data Alter a
       !(Expr a)        --     right hand side
   deriving (Eq, Show)
 
+-- | Binary Operators. Precedence is encoded in the parser.
+data BinOp
+  -- * Arithmetic Operators.
+  = OpAdd    -- ^ Addition (+)
+  | OpSub    -- ^ Subtraction (-)
+  | OpMult   -- ^ Multiplication (*)
+  | OpDiv    -- ^ Division (/)
+  -- * Relational operators. Precedence is encoded in the parser.
+  | OpLT     -- ^ Less than (<)
+  | OpLE     -- ^ Less or equal (<=)
+  | OpGT     -- ^ Greater than (>)
+  | OpGE     -- ^ Greater or equal (>=)
+  | OpEQ     -- ^ Equal (==)
+  | OpNEQ    -- ^ Not Equal (/=)
+-- * Boolean Operators.
+  | OpAnd    -- ^ Boolean and (&)
+  | OpOr     -- ^ Boolean or  (|)
+  deriving (Eq, Show)
+
+-- | Unary Operators. Note: unary negation is handled by the 'negate'
+-- prelude function.
+data UnaryOp
+  = OpNot    -- ^ Boolean negation (~)
+  deriving (Eq, Show)
 
 ------------------------------------------------------------------------
 -- Pretty Printing
@@ -123,6 +156,8 @@ instance Pretty Program where
 instance Pretty a => Pretty (Expr a) where
   pPrint (EVar x) = pPrint x
   pPrint (ENum x) = pPrint x
+  pPrint (EBinOp op x y) = pPrint x <> pPrint op <> pPrint y
+  pPrint (EUnaOp op x) = pPrint op <> pPrint x
   pPrint (EConstr t a) = text "Pack{" <> int t <> text "," <> int a <> text "}"
   pPrint (EAp f a) | isAtom a  = pPrint f <+> pPrint a
                    | otherwise = pPrint f <+> parens (pPrint a)
@@ -140,6 +175,23 @@ instance Pretty a => Pretty (Alter a) where
     pPrint e
   pPrint (ADefault e) =
     text "_" <+> text "->" <+> pPrint e
+
+instance Pretty BinOp where
+  pPrint OpAdd   = text " + "
+  pPrint OpSub   = text " - "
+  pPrint OpMult  = text "*"
+  pPrint OpDiv   = text "/"
+  pPrint OpLT    = text " < "
+  pPrint OpLE    = text " <= "
+  pPrint OpGT    = text " > "
+  pPrint OpGE    = text " >= "
+  pPrint OpEQ    = text " == "
+  pPrint OpNEQ   = text " != "
+  pPrint OpAnd   = text " & "
+  pPrint OpOr    = text " | "
+
+instance Pretty UnaryOp where
+  pPrint OpNot   = text "~"
 
 pBind :: Pretty a => (a, Expr a) -> Doc
 pBind (name, expr) = pPrint name <> equals <> pPrint expr <> text ";"

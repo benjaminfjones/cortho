@@ -88,6 +88,24 @@ exprParserTests = testGroup "Expr Parser Units" $
     , ("lambda case", "\\x -> case x of\n  <0> y -> 1; <1> z -> 2",
         Right (ELam ["x"] (ECase (EVar "x") [ APattern 0 ["y"] (ENum 1)
                                             , APattern 1 ["z"] (ENum 2)])))
+    -- Arithmetic
+    , ("arith +", "1 + 1",
+        Right (EBinOp OpAdd (ENum 1) (ENum 1)))
+    , ("arith -", "1 + (1 - 2)",
+        Right (EBinOp OpAdd (ENum 1) (EBinOp OpSub (ENum 1) (ENum 2))))
+    , ("arith *", "5*1 + (2*1 - 102)",
+        Right (EBinOp OpAdd (EBinOp OpMult (ENum 5) (ENum 1))
+                            (EBinOp OpSub (EBinOp OpMult (ENum 2) (ENum 1)) (ENum 102))))
+    ]
+
+nonExpressionParserTests = testGroup "Non-Expression Parser Units" $
+  map (\(name, s, eval) -> testCase name (eval (pExpr s)))
+    -- Note: parens around the expr's force the parse to parse it completely
+    -- and not just succeed with the partial 1 - 1 or 1 / 1 prefix.
+    [ ("non-assoc -", "(1 - 1 - 1)", assert . isLeft)
+    , ("non-assoc /", "(1 / 1 / 1)", assert . isLeft)
+    , ("non-assoc <", "(1 < 1 < 1)", assert . isLeft)
+    , ("non-assoc >=", "(1 >= 1 <= 1)", assert . isLeft)
     ]
 
 programParserTests = testGroup "Program Parser Units" $
@@ -129,6 +147,7 @@ suite :: TestTree
 suite = testGroup "Test Suite"
           [ parserTests
           , exprParserTests
+          , nonExpressionParserTests
           , programParserTests
           ]
 
