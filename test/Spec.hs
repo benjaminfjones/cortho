@@ -10,6 +10,8 @@ import Text.Parsec
 
 import Lang.Cortho
 
+import HeapSpec
+
 
 -- Parser Units --------------------------------------------------------
 
@@ -149,6 +151,8 @@ suite = testGroup "Test Suite"
           , exprParserTests
           , nonExpressionParserTests
           , programParserTests
+          -- * from HeapSpec
+          , heapTests
           ]
 
 main :: IO ()
