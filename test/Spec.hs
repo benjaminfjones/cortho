@@ -135,12 +135,6 @@ programParserTests = testGroup "Program Parser Units" $
     ]
 
 
--- Properties ----------------------------------------------------------
-
---    testGroup "Trivial QuickCheck tests"
---      [ testProperty "Quickcheck test" arith
---      , testProperty "Negation" negation
---      ]
 
 
 -- Main -----------------------------------------------------------------
