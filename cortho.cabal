@@ -20,6 +20,8 @@ library
                      , Lang.Cortho.Parser
                      , Lang.Cortho.Prelude
                      , Lang.Cortho.Types
+                     , Lang.Cortho.TI.Types
+                     , Lang.Cortho.TI.Compiler
   build-depends:       base   >= 4.7     && < 5
                      , containers >= 0.5 && < 0.6
                      , parsec >= 3.1     && < 3.2
