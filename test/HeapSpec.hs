@@ -1,37 +1,41 @@
-module HeapSpec where
+module HeapSpec
+  ( heapTests )
+where
 
+import Data.Maybe
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
 import Lang.Cortho.Heap (Heap, Addr)
 import qualified Lang.Cortho.Heap as H
 
+
 -- Test Group ----------------------------------------------------------
 
 heapTests = testGroup "Heap Tests"
-  [ testProperty "alloc" $ test_alloc
-  , testProperty "alloc size" $ test_alloc_size
+  [ testProperty "empty" $ test_empty
+  , testProperty "alloc" $ test_alloc
   , testProperty "remove" $ test_remove
   , testProperty "update" $ test_update
+  , testProperty "addresses membership" $ test_addresses
   ]
 
 
 -- Properties ----------------------------------------------------------
 
--- | Allocating an object on an existing heap produces one that contains the
--- object.
-test_alloc :: Heap Int -> Int -> Bool
-test_alloc h x =
-    case H.lookup h' addr of
-      Nothing -> False
-      Just _  -> True
-  where (h', addr) = H.alloc h x
+-- | The empty heap contains no allocations.
+test_empty :: Addr -> Bool
+test_empty a = isNothing $ H.lookup H.initial a
 
--- | Allocation increases size.
-test_alloc_size :: Heap Int -> Int -> Bool
-test_alloc_size h x = H.size h' == H.size h + 1
+-- | Allocating an object on an existing heap produces one that contains the
+-- object. Allocation always increases heap size.
+test_alloc :: Heap Int -> Int -> Bool
+test_alloc h x = isThere && H.size h' == H.size h + 1
   where
-    h' = H.alloc' h x
+    (h', addr) = H.alloc h x
+    isThere = case H.lookup h' addr of
+                Nothing -> False
+                Just _  -> True
 
 -- | Removing an object at a valid address reduces the heap size. Removing an
 -- object at an invalid address does nothing to the size.
@@ -50,6 +54,12 @@ test_update h x = maybe False (\hh -> H.lookup hh addr == Just x) h'
   where
     addr = head (H.addresses h)
     h' = H.update h addr x
+
+-- | The address returned by an allocation is a member of the addresses list.
+test_addresses :: Heap Int -> Int -> Bool
+test_addresses h obj =
+  let (h', a) = H.alloc h obj
+  in  a `elem` H.addresses h'
 
 -- Arbitrary Instances -------------------------------------------------
 

@@ -15,11 +15,11 @@ import HeapSpec
 
 -- Parser Units --------------------------------------------------------
 
-pIdent   = parse parseIdent ""
-pExpr    = parse parseExpr ""
-pNum     = parse parseNum ""
-pAlter   = parse parseAlt ""
-pAlts    = parse parseAlts ""
+pIdent   = parse parseIdent   ""
+pExpr    = parse parseExpr    ""
+pNum     = parse parseNum     ""
+pAlter   = parse parseAlt     ""
+pAlts    = parse parseAlts    ""
 pProgram = parse parseProgram ""
 
 isLeft :: Either a b -> Bool
