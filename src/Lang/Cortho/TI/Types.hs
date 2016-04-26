@@ -1,8 +1,13 @@
-{-
-- Lang.Cortho.TI.Types
--
-- Type module for Cortho's template instantiation compiler / interpreter.
--
+{-|
+Module      : Lang.Cortho.TI.Types
+Description : Template Instantiation Types
+Copyright   : (c) Benjamin F Jones, 2016
+License     : BSD-3
+Maintainer  : benjaminfjones@gmail.com
+Stability   : experimental
+Portability : POSIX
+
+Type module for Cortho's template instantiation compiler / interpreter.
 -}
 
 module Lang.Cortho.TI.Types where

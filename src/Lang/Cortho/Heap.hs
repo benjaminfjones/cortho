@@ -1,9 +1,15 @@
-{- Heap.hs
- -
- - A simple heap implementation based on Haskell standard lib containers. This
- - module is meant to be imported qualified.
- -
- -}
+{-|
+Module      : Lang.Cortho.Heap
+Description : Heap implementation
+Copyright   : (c) Benjamin F Jones, 2016
+License     : BSD-3
+Maintainer  : benjaminfjones@gmail.com
+Stability   : experimental
+Portability : POSIX
+
+A simple heap implementation based on Haskell standard lib containers. This
+module is meant to be imported qualified.
+-}
 
 module Lang.Cortho.Heap
   ( -- * Heap API
@@ -18,9 +24,6 @@ module Lang.Cortho.Heap
   , addresses
     -- * Heap address type
   , Addr
-  , mkAddr  -- for testing purposes
-  , nullAddr
-  , isNullAddr
   )
 where
 
@@ -32,7 +35,7 @@ import Prelude hiding (lookup)
 
 -- Heap ----------------------------------------------------------------
 
-
+-- | A heap types implemented using "Data.Map".
 data Heap a = Heap
   { hSize   :: !Int        -- ^ heap size
   , hUnused :: [Addr]      -- ^ unused addresses
@@ -61,6 +64,7 @@ alloc h obj = (heap', addr)
     addr:rest = hUnused h
     heap' = Heap (hSize h + 1) rest (M.insert addr obj (hAssoc h))
 
+-- | Version of 'alloc' that does not return the allocation address.
 alloc' :: Heap a -> a -> Heap a
 alloc' h o = fst (alloc h o)
 
@@ -97,16 +101,6 @@ addresses h = M.keys (hAssoc h)
 -- for safety.
 newtype Addr = Addr { addrRep :: Int }
   deriving (Eq, Ord)
-
-mkAddr :: Int -> Addr
-mkAddr = Addr
-
--- | An address distinct from all addresses returned by 'alloc'
-nullAddr :: Addr
-nullAddr = Addr (-1)
-
-isNullAddr :: Addr -> Bool
-isNullAddr = (== (addrRep nullAddr)) . addrRep
 
 instance Show Addr where
   show = show . addrRep

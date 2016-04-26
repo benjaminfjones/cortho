@@ -1,13 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-
- - Parser.hs
- -
- - To test the parser, try the following:
- -
- -     ghci> import Text.ParserCombinators.Parser
- -     ghci> let p = readP_to_S parseIdent
- -     ghci> p "alpha10 x = foo"
+{-|
+Module      : Lang.Cortho.Parser
+Description : Cortho parser
+Copyright   : (c) Benjamin F Jones, 2016
+License     : BSD-3
+Maintainer  : benjaminfjones@gmail.com
+Stability   : experimental
+Portability : POSIX
+
+This module implements the parser for Cortho using parsec ("Text.Parsec"). It
+handles precedence and associativity of all the binary / unary operators and
+funciton application.
+
 -}
 
 module Lang.Cortho.Parser
@@ -204,11 +209,11 @@ parseExpr =  parseELet
 
     parseE5' = parseMultOpRHS <|> parseDivOpRHS <|> (ws >> return id)
       where
-        parseMultOpRHS = do  -- * is right associative
+        parseMultOpRHS = do  -- note: * is right associative
           symbol '*'
           e5' <- parseE5
           return (\e6 -> EBinOp OpMult e6 e5')
-        parseDivOpRHS = do  -- / is non-associative
+        parseDivOpRHS = do  -- note: / is non-associative
           symbol '/'
           e6' <- parseE6
           return (\e6 -> EBinOp OpDiv e6 e6')

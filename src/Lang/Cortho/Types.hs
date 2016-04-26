@@ -1,10 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-{-
-- Lang.Cortho.Types
--
-- This module contains all the core types for Cortho, in particular is defines
-- and provides instances for the main expression type.
+{-|
+Module      : Lang.Cortho.Types
+Description : Core Cortho types
+Copyright   : (c) Benjamin F Jones, 2016
+License     : BSD-3
+Maintainer  : benjaminfjones@gmail.com
+Stability   : experimental
+Portability : POSIX
+
+This module contains all the core types for Cortho, in particular is defines
+and provides instances for the main expression type.
 -}
 
 module Lang.Cortho.Types
@@ -37,10 +43,12 @@ import           Text.PrettyPrint.HughesPJClass
 ------------------------------------------------------------------------
 
 -- | Identifier used for names
-newtype Ident = Ident { unIdent :: Text }
+newtype Ident = Ident { unIdent :: Text {-^ unwrap an 'Ident' -} }
   deriving (Eq, Show)
 
+-- | Text -> Ident
 identFromText = Ident
+-- | String -> Ident
 identFromStr  = Ident . T.pack
 
 instance IsString Ident where
@@ -60,33 +68,18 @@ data ScDef = ScDef
 
 -- | The core expression data type, parametrized over a binders type
 data Expr a
-  = EVar !Ident        -- ^ variable identifier
-  | ENum  Integer      -- ^ number
-  | EBinOp             -- ^ infix binary operator
-       BinOp           --     operator
-      !(Expr a)        --     left argument
-      !(Expr a)        --     right argument
-  | EUnaOp             -- ^ prefix unary operator
-       UnaryOp         --     unary operator
-      !(Expr a)        --     unary argument
-  | EConstr            -- ^ data constructor
-       Int             --     data constructor tag
-       Int             --     airity
-  | EAp                -- ^ function application
-      !(Expr a)        --     function
-      !(Expr a)        --     argument
-  | ELet               -- ^ let/letrec expression
-       Bool            --     True <-> is "letrec", False <-> is "let"
-      ![(a, Expr a)]   --     a list of bindings
-      !(Expr a)        --     body
-  | ECase              -- ^ case expression
-      !(Expr a)        --     expression to case on
-      ![Alter a]       --     case alternatives
-  | ELam               -- ^ lambda
-      ![a]         --     binders
-      !(Expr a)        --     body
+  = EVar !Ident                        -- ^ variable identifier
+  | ENum  Integer                      -- ^ number
+  | EBinOp BinOp !(Expr a) !(Expr a)   -- ^ binary operator
+  | EUnaOp UnaryOp !(Expr a)           -- ^ prefix unary operator
+  | EConstr Int Int                    -- ^ data constructor
+  | EAp !(Expr a) !(Expr a)            -- ^ function application
+  | ELet Bool ![(a, Expr a)] !(Expr a) -- ^ let/letrec expression (True <-> letrec)
+  | ECase !(Expr a) ![Alter a]         -- ^ case expression
+  | ELam ![a] !(Expr a)                -- ^ lambda
   deriving (Eq, Show)
 
+-- | Classify expressions as atoms and non-atoms
 isAtom :: Expr a -> Bool
 isAtom (EVar _)      = True
 isAtom (ENum _)      = True
@@ -96,35 +89,32 @@ isAtom (ELet _ _ _)  = False
 isAtom (ECase _ _)   = False
 isAtom (ELam _ _)    = False
 
--- | CoreExpr is the usual expression type where binders are just names
+-- | CoreExpr is the usual expression type where binders are names
 type CoreExpr = Expr Ident
+-- | CoreAlter is the case alternative type where binders are names
 type CoreAlter = Alter Ident
 
 -- | Case alternative, a pattern/expression pair
 data Alter a
-  = APattern           -- ^ non-trivial pattern match on a data constructor
-      !Int             --     data constructor tag
-      ![a]             --     binders
-      !(Expr a)        --     right hand side
-  | ADefault           -- ^ default "fall-through" case
-      !(Expr a)        --     right hand side
+  = APattern !Int ![a] !(Expr a) -- ^ non-trivial data c'tor pattern match
+  | ADefault !(Expr a)           -- ^ default "fall-through" case
   deriving (Eq, Show)
 
 -- | Binary Operators. Precedence is encoded in the parser.
 data BinOp
-  -- * Arithmetic Operators.
-  = OpAdd    -- ^ Addition (+)
+  = -- Arithmetic Operators
+    OpAdd    -- ^ Addition (+)
   | OpSub    -- ^ Subtraction (-)
   | OpMult   -- ^ Multiplication (*)
   | OpDiv    -- ^ Division (/)
-  -- * Relational operators. Precedence is encoded in the parser.
+    -- Relational operators. Precedence is encoded in the parser.
   | OpLT     -- ^ Less than (<)
   | OpLE     -- ^ Less or equal (<=)
   | OpGT     -- ^ Greater than (>)
   | OpGE     -- ^ Greater or equal (>=)
   | OpEQ     -- ^ Equal (==)
   | OpNEQ    -- ^ Not Equal (/=)
--- * Boolean Operators.
+    -- Boolean Operators.
   | OpAnd    -- ^ Boolean and (&)
   | OpOr     -- ^ Boolean or  (|)
   deriving (Eq, Show)
@@ -193,6 +183,7 @@ instance Pretty BinOp where
 instance Pretty UnaryOp where
   pPrint OpNot   = text "~"
 
+-- | Pretty print a variable binding
 pBind :: Pretty a => (a, Expr a) -> Doc
 pBind (name, expr) = pPrint name <> equals <> pPrint expr <> text ";"
 
