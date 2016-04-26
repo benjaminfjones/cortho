@@ -1,10 +1,12 @@
 # Cortho
 
-![Travis CI Badge](https://travis-ci.org/benjaminfjones/cortho.svg?branch=master)
+<a href="https://travis-ci.org/benjaminfjones/cortho">
+<img src="https://travis-ci.org/benjaminfjones/cortho.svg?branch=master" alt="Travis CI Badge"/>
+</a>
 
 Cortho is a compiler project for a small, core functional language. The
-design is heavily influenced by the [book] by Simon Peyton Jones and David
-Lester.
+design is heavily influenced by the text [1] [Implementing Functional Languages]
+by Simon Peyton Jones and David Lester.
 
 
 ## Implementation Goals
@@ -22,6 +24,8 @@ file.
 
 ## References
 
-[book]: S. Jones and D. Lester, "Implementing Functional Languages: A Tutorial" (1992). http://research.microsoft.com/en-us/um/people/simonpj/Papers/pj-lester-book
+ * [1] Simon Peyton Jones and David Lester, "Implementing Functional Languages: A Tutorial" (1992).
+   <http://research.microsoft.com/en-us/um/people/simonpj/Papers/pj-lester-book>
 
+[Implementing Functional Languages]: http://research.microsoft.com/en-us/um/people/simonpj/Papers/pj-lester-book
 [LICENSE]: LICENSE
