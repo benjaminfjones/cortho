@@ -25,6 +25,7 @@ install:
   - stack +RTS -N2 -RTS build --only-snapshot
 
 script:
+  - stack install hscolour
   - stack +RTS -N2 -RTS build --test --haddock
 
 notifications:
