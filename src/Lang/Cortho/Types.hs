@@ -32,6 +32,7 @@ module Lang.Cortho.Types
 where
 
 
+import           Prelude hiding ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Exts (IsString(..))
