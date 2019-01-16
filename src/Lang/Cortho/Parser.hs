@@ -53,7 +53,7 @@ import Debug.Trace (trace)
 ------------------------------------------------------------------------
 
 keywords :: [Text]
-keywords = map T.pack
+keywords =
   [ "let"
   , "letrec"
   , "in"
@@ -330,7 +330,8 @@ wsChars = " \t\n"
 wsChar :: Parser Char
 wsChar = satisfy (`elem` wsChars)
 
--- | Parse and throw away zero or more whitespace (spaces and tabs), but not newlines
+-- | Parse and throw away zero or more whitespace (spaces and tabs), but not
+-- newlines
 ws :: Parser ()
 ws = void $ many wsChar
 

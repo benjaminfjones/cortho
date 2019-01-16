@@ -9,7 +9,7 @@ Maintainer  : benjaminfjones@gmail.com
 Stability   : experimental
 Portability : POSIX
 
-This module contains all the core types for Cortho, in particular is defines
+This module contains all the core types for Cortho. In particular it defines
 and provides instances for the main expression type.
 -}
 
@@ -33,6 +33,7 @@ where
 
 
 import           Prelude hiding ((<>))
+
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Exts (IsString(..))
@@ -187,5 +188,3 @@ instance Pretty UnaryOp where
 -- | Pretty print a variable binding
 pBind :: Pretty a => (a, Expr a) -> Doc
 pBind (name, expr) = pPrint name <> equals <> pPrint expr <> text ";"
-
-

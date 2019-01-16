@@ -7,8 +7,9 @@ Maintainer  : benjaminfjones@gmail.com
 Stability   : experimental
 Portability : POSIX
 
-A simple heap implementation based on Haskell standard lib containers. This
-module is meant to be imported qualified.
+A simple heap (in the memory sense, not the datastructure sense) implementation
+based on Haskell standard lib containers. This module is meant to be imported
+qualified.
 -}
 
 module Lang.Cortho.Heap
@@ -27,10 +28,10 @@ module Lang.Cortho.Heap
   )
 where
 
-import Data.Map (Map)
-import qualified Data.Map as M
+import           Prelude hiding (lookup)
 
-import Prelude hiding (lookup)
+import           Data.Map (Map)
+import qualified Data.Map as M
 
 
 -- Heap ----------------------------------------------------------------
