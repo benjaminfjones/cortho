@@ -32,7 +32,7 @@ parserTests = testGroup "Parser Units"
   [ testCase "parse ident" $
       pIdent "foo" @?= Right "foo"
   , testCase "parse ident fail" $
-      assert $ isLeft (pIdent "123foo") 
+      assertBool "" $ isLeft (pIdent "123foo")
   , testCase "parse num" $
       pNum "1024" @?= Right 1024
   , testCase "parse pattern" $
@@ -104,10 +104,10 @@ nonExpressionParserTests = testGroup "Non-Expression Parser Units" $
   map (\(name, s, eval) -> testCase name (eval (pExpr s)))
     -- Note: parens around the expr's force the parse to parse it completely
     -- and not just succeed with the partial 1 - 1 or 1 / 1 prefix.
-    [ ("non-assoc -", "(1 - 1 - 1)", assert . isLeft)
-    , ("non-assoc /", "(1 / 1 / 1)", assert . isLeft)
-    , ("non-assoc <", "(1 < 1 < 1)", assert . isLeft)
-    , ("non-assoc >=", "(1 >= 1 <= 1)", assert . isLeft)
+    [ ("non-assoc -", "(1 - 1 - 1)", assertBool "" . isLeft)
+    , ("non-assoc /", "(1 / 1 / 1)", assertBool "" . isLeft)
+    , ("non-assoc <", "(1 < 1 < 1)", assertBool "" . isLeft)
+    , ("non-assoc >=", "(1 >= 1 <= 1)", assertBool "" . isLeft)
     ]
 
 programParserTests = testGroup "Program Parser Units" $
@@ -122,7 +122,7 @@ programParserTests = testGroup "Program Parser Units" $
                  \h x = case (let y = x in y) of\n\
                  \        <1> -> 2;\n\
                  \        <2> -> 5",
-        assert . isRight)
+        assertBool "" . isRight)
     , ("dangling else", "f x y = case x of\n\
                         \          <1> -> case y of\n\
                         \                   <1> -> 1;\n\

@@ -41,6 +41,7 @@ test-suite cortho-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
+  other-modules:       HeapSpec
   build-depends:       base
                      , cortho
                      , parsec >= 3.1    && < 3.2
