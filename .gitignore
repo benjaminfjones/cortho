@@ -14,3 +14,5 @@ cabal.sandbox.config
 *.aux
 *.hp
 .stack-work/
+dist-newstyle
+.ghc.environment.x86_64-darwin-8.6.3
