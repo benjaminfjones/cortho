@@ -7,7 +7,7 @@ Maintainer  : benjaminfjones@gmail.com
 Stability   : experimental
 Portability : POSIX
 
-A simple heap (in the memory sense, not the datastructure sense) implementation
+A simple heap (in the memory sense, not the data structure sense) implementation
 based on Haskell standard lib containers. This module is meant to be imported
 qualified.
 -}
@@ -36,7 +36,7 @@ import qualified Data.Map as M
 
 -- Heap ----------------------------------------------------------------
 
--- | A heap types implemented using "Data.Map".
+-- | A heap type implemented using "Data.Map".
 data Heap a = Heap
   { hSize   :: !Int        -- ^ heap size
   , hUnused :: [Addr]      -- ^ unused addresses
@@ -70,7 +70,8 @@ alloc' :: Heap a -> a -> Heap a
 alloc' h o = fst (alloc h o)
 
 -- | Remove the object at the given addresss from the heap. If the address
--- is unallocated, return the original heap.
+-- is unallocated, return the original heap. 'free' does not change the unused
+-- addresses.
 free :: Heap a -> Addr -> Heap a
 free h addr =
   case lookup h addr of
